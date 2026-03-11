@@ -3,4 +3,4 @@ const nextConfig = {
   reactStrictMode: true,
 }
 
-module.exports = next在玩家中
+module.exports = nextConfig

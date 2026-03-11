@@ -1,85 +1,164 @@
-import { API_BASE_URL } from '@/config/site';
+'use client';
+import { useState, useEffect } from 'react';
 
-async function getStats() {
-  try {
-    const res = await fetch(`${API_BASE_URL}/stats/employees`, { 
-      cache: 'no-store' 
-    });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
+const API_URL = 'http://localhost:3000/api';
+
+interface DashboardStats {
+  totalEmployees: number;
+  activeEmployees: number;
+  departments: number;
+  todayAttendance: number;
 }
 
-export default async function Home() {
-  const statsData = await getStats();
-  const stats = statsData?.data || { total: 0, active: 0, probation: 0, resigned: 0, byDepartment: [] };
+export default function Dashboard() {
+  const [stats, setStats] = useState<DashboardStats>({
+    totalEmployees: 0,
+    activeEmployees: 0,
+    departments: 0,
+    todayAttendance: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      const empRes = await fetch(`${API_URL}/stats/employees`);
+      const empData = await empRes.json();
+      
+      const deptRes = await fetch(`${API_URL}/departments`);
+      const deptData = await deptRes.json();
+
+      const today = new Date().toISOString().split('T')[0];
+      const attRes = await fetch(`${API_URL}/attendance?startDate=${today}&endDate=${today}`);
+      const attData = await attRes.json();
+
+      setStats({
+        totalEmployees: empData?.data?.total || 0,
+        activeEmployees: empData?.data?.active || 0,
+        departments: deptData?.data?.length || 0,
+        todayAttendance: attData?.data?.length || 0
+      });
+      setLoading(false);
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err);
+      setLoading(false);
+    }
+  };
+
+  const currentHour = new Date().getHours();
+  let greeting = '你好';
+  if (currentHour < 6) greeting = '夜深了';
+  else if (currentHour < 12) greeting = '早上好';
+  else if (currentHour < 14) greeting = '中午好';
+  else if (currentHour < 18) greeting = '下午好';
+  else greeting = '晚上好';
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-slate-800 mb-8">仪表盘</h1>
-      
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm text-slate-500 mb-1">员工总数</div>
-          <div className="text-3xl font-bold text-slate-800">{stats.total}</div>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f5f7fa' }}>
+      {/* 顶部导航 */}
+      <header style={{ backgroundColor: 'white', padding: '16px 32px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '40px', height: '40px', backgroundColor: '#2563eb', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '18px' }}>HR</div>
+          <span style={{ fontSize: '20px', fontWeight: 600, color: '#1f2937' }}>人事管理系统</span>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm text-slate-500 mb-1">在职员工</div>
-          <div className="text-3xl font-bold text-green-600">{stats.active}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <span style={{ color: '#6b7280', fontSize: '14px' }}>{greeting}，Admin</span>
+          <div style={{ width: '36px', height: '36px', backgroundColor: '#e5e7eb', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: '#6b7280' }}>👤</span>
+          </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm text-slate-500 mb-1">试用期</div>
-          <div className="text-3xl font-bold text-yellow-600">{stats.probation}</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm text-slate-500 mb-1">已离职</div>
-          <div className="text-3xl font-bold text-red-600">{stats.resigned}</div>
-        </div>
-      </div>
+      </header>
 
-      {/* 部门分布 */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-slate-800 mb-4">部门人员分布</h2>
-        {stats.byDepartment && stats.byDepartment.length > 0 ? (
-          <div className="space-y-3">
-            {stats.byDepartment.map((dept: any, index: number) => (
-              <div key={index} className="flex items-center justify-between">
-                <span className="text-slate-600">{dept._id || '未分配'}</span>
-                <div className="flex items-center">
-                  <div className="w-48 bg-slate-200 rounded-full h-2 mr-3">
-                    <div 
-                      className="bg-blue-500 h-2 rounded-full" 
-                      style={{ width: `${(dept.count / stats.total) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium text-slate-700">{dept.count} 人</span>
+      <main style={{ padding: '24px 32px' }}>
+        {/* 欢迎区域 */}
+        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' }}>{greeting}！</h1>
+          <p style={{ color: '#6b7280', fontSize: '14px' }}>欢迎回到工作台，今天也是充实的一天 💪</p>
+          <p style={{ color: '#9ca3af', fontSize: '12px', marginTop: '8px' }}>{new Date().toLocaleDateString('zh-CN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        </div>
+
+        {/* 统计卡片 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '24px' }}>
+          {[
+            { label: '员工总数', value: stats.totalEmployees, icon: '👥', color: '#2563eb', bg: '#eff6ff' },
+            { label: '在职员工', value: stats.activeEmployees, icon: '✅', color: '#10b981', bg: '#ecfdf5' },
+            { label: '部门数量', value: stats.departments, icon: '🏢', color: '#8b5cf6', bg: '#f5f3ff' },
+            { label: '今日考勤', value: stats.todayAttendance, icon: '📋', color: '#f59e0b', bg: '#fffbeb' },
+          ].map((item, index) => (
+            <div key={index} style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '4px' }}>{item.label}</p>
+                  <p style={{ fontSize: '32px', fontWeight: 700, color: item.color }}>{loading ? '...' : item.value}</p>
+                </div>
+                <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                  {item.icon}
                 </div>
               </div>
+            </div>
+          ))}
+        </div>
+
+        {/* 功能模块 */}
+        <div style={{ marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#1f2937', marginBottom: '16px' }}>快捷入口</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
+            {[
+              { icon: '👨‍💼', title: '员工管理', desc: '员工档案', href: '/employees', color: '#2563eb' },
+              { icon: '📋', title: '考勤打卡', desc: '签到签退', href: '/attendance', color: '#10b981' },
+              { icon: '📝', title: '请假审批', desc: '请假申请', href: '/leave', color: '#8b5cf6' },
+              { icon: '💰', title: '薪酬管理', desc: '工资发放', href: '/payroll', color: '#f59e0b' },
+              { icon: '🏢', title: '部门管理', desc: '组织架构', href: '/departments', color: '#ec4899' },
+            ].map((item, index) => (
+              <a key={index} href={item.href} style={{ 
+                backgroundColor: 'white', 
+                borderRadius: '12px', 
+                padding: '20px', 
+                textDecoration: 'none',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                display: 'block',
+                transition: 'transform 0.2s, box-shadow 0.2s'
+              }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: item.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', marginBottom: '12px' }}>
+                  {item.icon}
+                </div>
+                <p style={{ fontSize: '15px', fontWeight: 600, color: '#1f2937', marginBottom: '4px' }}>{item.title}</p>
+                <p style={{ fontSize: '12px', color: '#9ca3af' }}>{item.desc}</p>
+              </a>
             ))}
           </div>
-        ) : (
-          <p className="text-slate-500">暂无数据</p>
-        )}
-      </div>
+        </div>
 
-      {/* 快捷操作 */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <a href="/employees" className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg p-6 text-center transition">
-          <div className="text-xl font-semibold mb-1">员工管理</div>
-          <div className="text-blue-100 text-sm">查看和添加员工信息</div>
-        </a>
-        <a href="/attendance" className="bg-green-500 hover:bg-green-600 text-white rounded-lg p-6 text-center transition">
-          <div className="text-xl font-semibold mb-1">考勤打卡</div>
-          <div className="text-green-100 text-sm">员工签到签退</div>
-        </a>
-        <a href="/leave" className="bg-purple-500 hover:bg-purple-600 text-white rounded-lg p-6 text-center transition">
-          <div className="text-xl font-semibold mb-1">请假审批</div>
-          <div className="text-purple-100 text-sm">管理请假申请</div>
-        </a>
-      </div>
+        {/* 第二行功能 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
+          {[
+            { icon: '📢', title: '通知公告', desc: '公司通知', href: '/announcement', color: '#ef4444' },
+            { icon: '🔄', title: '审批流程', desc: '待办审批', href: '/workflow', color: '#06b6d4' },
+            { icon: '📅', title: '会议管理', desc: '会议室', href: '/meeting', color: '#84cc16' },
+            { icon: '📁', title: '文档管理', desc: '公司文档', href: '/documents', color: '#6366f1' },
+            { icon: '⚙️', title: '系统设置', desc: '系统配置', href: '/settings', color: '#64748b' },
+          ].map((item, index) => (
+            <a key={index} href={item.href} style={{ 
+              backgroundColor: 'white', 
+              borderRadius: '12px', 
+              padding: '20px', 
+              textDecoration: 'none',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              display: 'block',
+              transition: 'transform 0.2s, box-shadow 0.2s'
+            }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: item.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', marginBottom: '12px' }}>
+                {item.icon}
+              </div>
+              <p style={{ fontSize: '15px', fontWeight: 600, color: '#1f2937', marginBottom: '4px' }}>{item.title}</p>
+              <p style={{ fontSize: '12px', color: '#9ca3af' }}>{item.desc}</p>
+            </a>
+          ))}
+        </div>
+      </main>
     </div>
   );
 }
