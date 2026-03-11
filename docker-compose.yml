@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: hr-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: hr_system
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hr-backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/hr_system
+      - NODE_ENV=production
+    depends_on:
+      - mongodb
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hr-frontend
+    restart: always
+    ports:
+      - "80:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:3000/api
+    depends_on:
+      - backend
+
+volumes:
+  mongodb_data:

@@ -1,0 +1,1 @@
+{"useNpm": true, "typescript": true, "tailwind": true, "eslint": true, "app": true, "srcDir": true, "importAlias": "@/*", "reactCompiler": false}
